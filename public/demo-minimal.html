@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案一：极简现代风格</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', -apple-system, sans-serif; background: #FAFAFA; color: #1a1a1a; }
+    
+    .app { display: flex; flex-direction: column; height: 100vh; }
+    
+    /* 顶部标题栏 */
+    .header { 
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 56px; 
+      background: #fff; border-bottom: 1px solid #EAEAEA;
+    }
+    .header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; }
+    .search-box {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; background: #F5F5F5; border-radius: 8px;
+      font-size: 13px; color: #888; width: 280px;
+    }
+    .search-box svg { width: 16px; height: 16px; stroke: #AAA; }
+    .btn-primary {
+      padding: 8px 16px; background: #1a1a1a; color: #fff;
+      border: none; border-radius: 8px; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-primary:hover { background: #333; }
+    
+    /* 主体区域 */
+    .main { display: flex; flex: 1; overflow: hidden; }
+    
+    /* 左侧文件夹列表 */
+    .sidebar { 
+      width: 240px; padding: 16px 12px;
+      background: #fff; border-right: 1px solid #EAEAEA;
+    }
+    .sidebar-title {
+      font-size: 11px; font-weight: 600; color: #888;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 0 8px; margin-bottom: 8px;
+    }
+    .folder-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 8px; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .folder-item:hover { background: #F5F5F5; }
+    .folder-item.active { background: #F0F0F0; }
+    .folder-item svg { width: 18px; height: 18px; stroke: #666; }
+    .folder-info { flex: 1; }
+    .folder-name { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+    .folder-count { font-size: 11px; color: #888; }
+    
+    /* 右侧文件列表 */
+    .content { flex: 1; padding: 24px; overflow-y: auto; }
+    .content-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .content-title { font-size: 24px; font-weight: 600; letter-spacing: -0.03em; }
+    .content-path { font-size: 13px; color: #888; margin-top: 4px; }
+    
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-card {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px; background: #fff;
+      border: 1px solid #EAEAEA; border-radius: 10px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .file-card:hover { border-color: #D0D0D0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .file-icon {
+      width: 40px; height: 40px; background: #F5F5F5;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    }
+    .file-icon svg { width: 20px; height: 20px; stroke: #666; }
+    .file-info { flex: 1; }
+    .file-name { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+    .file-meta { font-size: 12px; color: #888; }
+    .file-meta span { margin-right: 8px; }
+    .tag { 
+      padding: 4px 10px; background: #F5F5F5; 
+      border-radius: 6px; font-size: 12px; color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>FileWise</h1>
+      <div class="search-box">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <span>搜索文件...</span>
+      </div>
+      <button class="btn-primary">+ 添加文件夹</button>
+    </header>
+    
+    <div class="main">
+      <aside class="sidebar">
+        <div class="sidebar-title">文件夹</div>
+        <div class="folder-item active">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+          </svg>
+          <div class="folder-info">
+            <div class="folder-name">工具平台</div>
+            <div class="folder-count">15 个文件</div>
+          </div>
+        </div>
+        <div class="folder-item">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+          </svg>
+          <div class="folder-info">
+            <div class="folder-name">客户案例</div>
+            <div class="folder-count">3 个文件</div>
+          </div>
+        </div>
+      </aside>
+      
+      <main class="content">
+        <div class="content-header">
+          <div>
+            <div class="content-title">工具平台</div>
+            <div class="content-path">源路径：/浏览器上传/工具平台</div>
+          </div>
+          <button class="btn-primary">开始处理</button>
+        </div>
+        
+        <div class="file-list">
+          <div class="file-card">
+            <div class="file-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <div class="file-info">
+              <div class="file-name">数据库自治产品DAS介绍.pptx</div>
+              <div class="file-meta"><span>DAS/</span><span>PPTX · 57.8 MB</span></div>
+            </div>
+            <span class="tag">已提取</span>
+          </div>
+          <div class="file-card">
+            <div class="file-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <div class="file-info">
+              <div class="file-name">DMS产品介绍2024 v1.1.pptx</div>
+              <div class="file-meta"><span>PPTX · 66.3 MB</span></div>
+            </div>
+            <span class="tag">已提取</span>
+          </div>
+          <div class="file-card">
+            <div class="file-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <div class="file-info">
+              <div class="file-name">DMS数据库管理介绍-对外.pdf</div>
+              <div class="file-meta"><span>PDF · 10.2 MB</span></div>
+            </div>
+            <span class="tag">已提取</span>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

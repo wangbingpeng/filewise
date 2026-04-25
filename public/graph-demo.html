@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>知识图谱可视化方案演示</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    
+    /* 力导向图样式 */
+    .force-node {
+      position: absolute;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-align: center;
+      padding: 4px;
+    }
+    .force-node:hover {
+      transform: scale(1.2);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 100;
+    }
+    .force-edge {
+      position: absolute;
+      height: 1px;
+      background: #d1d5db;
+      transform-origin: left center;
+      pointer-events: none;
+    }
+    
+    /* 卡片网格样式 */
+    .file-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .file-card:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+    .file-card.selected {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 500;
+      margin: 2px;
+    }
+    
+    /* 树状样式 */
+    .tree-item {
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .tree-item:hover {
+      background: #f3f4f6;
+    }
+    .tree-connection {
+      position: absolute;
+      width: 2px;
+      background: #e5e7eb;
+    }
+    
+    /* 矩阵样式 */
+    .matrix-cell {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .matrix-cell:hover {
+      transform: scale(1.1);
+    }
+    
+    /* 标签云样式 */
+    .tag-cloud-item {
+      display: inline-block;
+      padding: 4px 12px;
+      margin: 4px;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tag-cloud-item:hover {
+      transform: scale(1.1);
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <!-- 导航 -->
+  <nav class="bg-white border-b sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <h1 class="text-lg font-bold">知识图谱可视化方案演示</h1>
+      <div class="flex gap-2">
+        <button onclick="showDemo('force')" class="demo-btn px-3 py-1.5 text-sm rounded-lg bg-blue-500 text-white">力导向图</button>
+        <button onclick="showDemo('cards')" class="demo-btn px-3 py-1.5 text-sm rounded-lg bg-gray-200 hover:bg-gray-300">卡片网格</button>
+        <button onclick="showDemo('tree')" class="demo-btn px-3 py-1.5 text-sm rounded-lg bg-gray-200 hover:bg-gray-300">树状关联</button>
+        <button onclick="showDemo('matrix')" class="demo-btn px-3 py-1.5 text-sm rounded-lg bg-gray-200 hover:bg-gray-300">关系矩阵</button>
+        <button onclick="showDemo('tags')" class="demo-btn px-3 py-1.5 text-sm rounded-lg bg-gray-200 hover:bg-gray-300">标签云</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto p-6">
+    <!-- 方案一：力导向图 -->
+    <div id="demo-force" class="demo-panel">
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="p-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+          <h2 class="text-lg font-bold">方案一：力导向图</h2>
+          <p class="text-sm text-gray-600 mt-1">节点根据关联强度自动布局，适合探索性分析整体网络结构</p>
+        </div>
+        <div id="force-container" class="relative h-96 bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+          <!-- 动态生成 -->
+        </div>
+        <div class="p-4 border-t bg-gray-50">
+          <div class="flex gap-4 text-xs">
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-gray-500"></span> 文件</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500"></span> 项目</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-purple-500"></span> 技术</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-amber-500"></span> 主题</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-4 grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-lg p-4">
+          <h3 class="font-semibold text-sm mb-2">✅ 优点</h3>
+          <ul class="text-xs text-gray-600 space-y-1">
+            <li>• 直观展示整体网络结构</li>
+            <li>• 关联紧密的节点自然聚类</li>
+            <li>• 支持缩放、拖拽交互</li>
+          </ul>
+        </div>
+        <div class="bg-white rounded-lg p-4">
+          <h3 class="font-semibold text-sm mb-2">⚠️ 缺点</h3>
+          <ul class="text-xs text-gray-600 space-y-1">
+            <li>• 节点多时容易混乱</li>
+            <li>• 不易精确查找特定文件</li>
+            <li>• 需要计算布局，性能开销</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 方案二：卡片网格 + 连线 -->
+    <div id="demo-cards" class="demo-panel hidden">
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="p-4 border-b bg-gradient-to-r from-green-50 to-emerald-50">
+          <h2 class="text-lg font-bold">方案二：卡片网格 + 标签连线</h2>
+          <p class="text-sm text-gray-600 mt-1">文件以卡片展示，通过共享标签建立关联，适合快速浏览和查找</p>
+        </div>
+        <div class="flex">
+          <!-- 文件列表 -->
+          <div class="w-2/3 p-4 border-r">
+            <div class="mb-3 flex items-center justify-between">
+              <span class="text-sm font-medium">文件列表</span>
+              <span class="text-xs text-gray-500">点击卡片查看关联</span>
+            </div>
+            <div id="cards-grid" class="grid grid-cols-2 gap-3">
+              <!-- 动态生成 -->
+            </div>
+          </div>
+          <!-- 关联面板 -->
+          <div class="w-1/3 p-4 bg-gray-50">
+            <div class="mb-3">
+              <span class="text-sm font-medium">选中文件关联</span>
+            </div>
+            <div id="cards-relations" class="space-y-2">
+              <p class="text-xs text-gray-400 text-center py-8">点击左侧文件卡片查看关联</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-4 grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-lg p-4">
+          <h3 class="font-semibold text-sm mb-2">✅ 优点</h3>
+          <ul class="text-xs text-gray-600 space-y-1">
+            <li>• 文件信息展示完整</li>
+            <li>• 标签直观，易于理解</li>
+            <li>• 快速定位相关文件</li>
+          </ul>
+        </div>
+        <div class="bg-white rounded-lg p-4">
+          <h3 class="font-semibold text-sm mb-2">⚠️ 缺点</h3>
+          <ul class="text-xs text-gray-600 space-y-1">
+            <li>• 占用空间较大</li>
+            <li>• 文件多时需要分页</li>
+            <li>• 跨页关联不直观</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 方案三：树状 + 关联线 -->
+    <div id="demo-tree" class="demo-panel hidden">
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="p-4 border-b bg-gradient-to-r from-amber-50 to-orange-50">
+          <h2 class="text-lg font-bold">方案三：树状结构 + 跨级关联</h2>
+          <p class="text-sm text-gray-600 mt-1">保留目录层级结构，实体节点连接跨目录的相关文件</p>
+        </div>
+        <div class="flex">
+          <!-- 目录树 -->
+          <div class="w-1/3 p-4 border-r overflow-auto max-h-96">
+            <div id="tree-view" class="text-sm">
+              <!-- 动态生成 -->
+            </div>
+          </div>
+          <!-- 关联视图 -->
+          <div class="flex-1 p-4 relative bg-gradient-to-br from-slate-50 to-slate-100">
+            <div class="mb-3">
+              <span class="text-sm font-medium">实体关联视图</span>
+              <span class="text-xs text-gray-400 ml-2">点击左侧实体查看关联文件</span>
+            </div>
+            <div id="tree-relations" class="relative h-72">
+              <!-- 动态生成 -->
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-4 grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-lg p-4">
+          <h3 class="font-semibold text-sm mb-2">✅ 优点</h3>
+          <ul class="text-xs text-gray-600 space-y-1">
+            <li>• 保留原有目录结构</li>
+            <li>• 层级清晰易理解</li>
+            <li>• 发现跨目录关联</li>
+          </ul>
+        </div>
+        <div class="bg-white rounded-lg p-4">
+          <h3 class="font-semibold text-sm mb-2">⚠️ 缺点</h3>
+          <ul class="text-xs text-gray-600 space-y-1">
+            <li>• 关联线可能交叉混乱</li>
+            <li>• 扁平目录效果不明显</li>
+            <li>• 需要目录结构支撑</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 方案四：关系矩阵 -->
+    <div id="demo-matrix" class="demo-panel hidden">
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="p-4 border-b bg-gradient-to-r from-purple-50 to-pink-50">
+          <h2 class="text-lg font-bold">方案四：关系矩阵</h2>
+          <p class="text-sm text-gray-600 mt-1">矩阵展示文件间的关联强度，颜色越深关联越强</p>
+        </div>
+        <div class="p-4 overflow-auto">
+          <div id="matrix-view" class="inline-block">
+            <!-- 动态生成 -->
+          </div>
+          <div class="mt-4 flex items-center gap-4 text-xs">
+            <span class="text-gray-500">关联强度：</span>
+            <div class="flex items-center gap-1">
+              <div class="w-4 h-4 rounded bg-gray-100"></div>
+              <span>无</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <div class="w-4 h-4 rounded bg-blue-200"></div>
+              <span>弱</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <div class="w-4 h-4 rounded bg-blue-400"></div>
+              <span>中</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <div class="w-4 h-4 rounded bg-blue-600"></div>
+              <span>强</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-4 grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-lg p-4">
+          <h3 class="font-semibold text-sm mb-2">✅ 优点</h3>
+          <ul class="text-xs text-gray-600 space-y-1">
+            <li>• 批量对比文件关联</li>
+            <li>• 关联强度一目了然</li>
+            <li>• 适合分析型场景</li>
+          </ul>
+        </div>
+        <div class="bg-white rounded-lg p-4">
+          <h3 class="font-semibold text-sm mb-2">⚠️ 缺点</h3>
+          <ul class="text-xs text-gray-600 space-y-1">
+            <li>• 文件多时矩阵过大</li>
+            <li>• 不能展示具体关联内容</li>
+            <li>• 学习成本稍高</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 方案五：标签云 -->
+    <div id="demo-tags" class="demo-panel hidden">
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="p-4 border-b bg-gradient-to-r from-cyan-50 to-teal-50">
+          <h2 class="text-lg font-bold">方案五：标签云 + 文件聚合</h2>
+          <p class="text-sm text-gray-600 mt-1">点击标签查看相关文件聚合，适合主题发现和快速筛选</p>
+        </div>
+        <div class="flex">
+          <!-- 标签云 -->
+          <div class="w-1/2 p-6 border-r">
+            <div class="mb-3">
+              <span class="text-sm font-medium">标签云</span>
+              <span class="text-xs text-gray-400 ml-2">大小表示关联文件数</span>
+            </div>
+            <div id="tag-cloud" class="text-center py-4">
+              <!-- 动态生成 -->
+            </div>
+          </div>
+          <!-- 文件聚合 -->
+          <div class="w-1/2 p-4 bg-gray-50">
+            <div class="mb-3">
+              <span class="text-sm font-medium">关联文件</span>
+            </div>
+            <div id="tag-files" class="space-y-2 max-h-72 overflow-auto">
+              <p class="text-xs text-gray-400 text-center py-8">点击左侧标签查看文件</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-4 grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-lg p-4">
+          <h3 class="font-semibold text-sm mb-2">✅ 优点</h3>
+          <ul class="text-xs text-gray-600 space-y-1">
+            <li>• 快速发现热门主题</li>
+            <li>• 标签筛选直观高效</li>
+            <li>• 支持多标签组合筛选</li>
+          </ul>
+        </div>
+        <div class="bg-white rounded-lg p-4">
+          <h3 class="font-semibold text-sm mb-2">⚠️ 缺点</h3>
+          <ul class="text-xs text-gray-600 space-y-1">
+            <li>• 依赖标签质量</li>
+            <li>• 不展示文件间直接关系</li>
+            <li>• 标签过多时难以选择</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 推荐总结 -->
+    <div class="mt-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl p-6 text-white">
+      <h2 class="text-lg font-bold mb-3">💡 推荐方案</h2>
+      <p class="text-sm opacity-90 mb-4">根据你的需求（展示文件关联、快速查找、内容挖掘），推荐采用 <strong>卡片网格 + 标签筛选</strong> 作为主视图，配合 <strong>标签云</strong> 进行快速筛选。</p>
+      <div class="flex gap-3">
+        <button class="px-4 py-2 bg-white text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition">
+          选择方案二：卡片网格
+        </button>
+        <button class="px-4 py-2 bg-white/20 text-white rounded-lg text-sm font-medium hover:bg-white/30 transition">
+          选择方案五：标签云
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // 模拟数据
+    const files = [
+      { id: 1, name: 'DMS产品介绍2024.pptx', type: 'pptx', tags: ['DMS', '数据库', '产品介绍'], folder: '工具平台' },
+      { id: 2, name: 'DMS数据安全介绍.pdf', type: 'pdf', tags: ['DMS', '数据安全', '介绍'], folder: '工具平台' },
+      { id: 3, name: 'DAS AGENT多云运维.pptx', type: 'pptx', tags: ['DAS', 'Agent', '多云运维'], folder: '工具平台' },
+      { id: 4, name: 'DTS基本原理和实践.pdf', type: 'pdf', tags: ['DTS', '数据库', '原理'], folder: '工具平台' },
+      { id: 5, name: '小红书-Lindorm案例.pptx', type: 'pptx', tags: ['Lindorm', '案例', '小红书'], folder: '客户案例' },
+      { id: 6, name: '完美世界-PolarDB方案.pdf', type: 'pdf', tags: ['PolarDB', '数据库', '方案'], folder: '客户案例' },
+    ];
+
+    const entities = [
+      { id: 'e1', name: 'DMS', type: 'project', files: [1, 2] },
+      { id: 'e2', name: 'DAS', type: 'project', files: [3] },
+      { id: 'e3', name: 'DTS', type: 'project', files: [4] },
+      { id: 'e4', name: '数据库', type: 'technology', files: [1, 4, 6] },
+      { id: 'e5', name: '产品介绍', type: 'topic', files: [1] },
+      { id: 'e6', name: '案例', type: 'topic', files: [5] },
+    ];
+
+    const typeColors = {
+      file: '#6b7280',
+      project: '#3b82f6',
+      technology: '#8b5cf6',
+      topic: '#f59e0b',
+    };
+
+    const tagColors = [
+      'bg-blue-100 text-blue-700',
+      'bg-purple-100 text-purple-700',
+      'bg-amber-100 text-amber-700',
+      'bg-green-100 text-green-700',
+      'bg-pink-100 text-pink-700',
+      'bg-cyan-100 text-cyan-700',
+    ];
+
+    // 切换演示面板
+    function showDemo(type) {
+      document.querySelectorAll('.demo-panel').forEach(p => p.classList.add('hidden'));
+      document.getElementById('demo-' + type).classList.remove('hidden');
+      
+      document.querySelectorAll('.demo-btn').forEach(btn => {
+        btn.className = 'demo-btn px-3 py-1.5 text-sm rounded-lg bg-gray-200 hover:bg-gray-300';
+      });
+      event.target.className = 'demo-btn px-3 py-1.5 text-sm rounded-lg bg-blue-500 text-white';
+    }
+
+    // 渲染力导向图
+    function renderForceGraph() {
+      const container = document.getElementById('force-container');
+      const width = container.offsetWidth;
+      const height = container.offsetHeight;
+      
+      // 简化的节点位置（实际应用中用力导向算法计算）
+      const nodePositions = {
+        'f1': { x: 120, y: 150, r: 24, name: 'DMS产品介绍', type: 'file' },
+        'f2': { x: 280, y: 120, r: 24, name: 'DMS数据安全', type: 'file' },
+        'f3': { x: 180, y: 280, r: 24, name: 'DAS AGENT', type: 'file' },
+        'f4': { x: 350, y: 220, r: 24, name: 'DTS原理', type: 'file' },
+        'f5': { x: 480, y: 150, r: 24, name: '小红书案例', type: 'file' },
+        'f6': { x: 550, y: 280, r: 24, name: 'PolarDB方案', type: 'file' },
+        'e1': { x: 200, y: 80, r: 32, name: 'DMS', type: 'project' },
+        'e2': { x: 150, y: 200, r: 28, name: 'DAS', type: 'project' },
+        'e3': { x: 320, y: 300, r: 26, name: 'DTS', type: 'project' },
+        'e4': { x: 400, y: 100, r: 36, name: '数据库', type: 'technology' },
+        'e5': { x: 280, y: 50, r: 22, name: '介绍', type: 'topic' },
+        'e6': { x: 500, y: 80, r: 22, name: '案例', type: 'topic' },
+      };
+
+      // 绘制边
+      const edges = [
+        ['f1', 'e1'], ['f2', 'e1'], ['f3', 'e2'], ['f4', 'e3'],
+        ['f1', 'e4'], ['f4', 'e4'], ['f6', 'e4'],
+        ['f1', 'e5'], ['f5', 'e6'],
+      ];
+
+      container.innerHTML = '';
+      
+      // SVG 层用于绘制连线
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;';
+      
+      edges.forEach(([from, to]) => {
+        const p1 = nodePositions[from];
+        const p2 = nodePositions[to];
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', p1.x);
+        line.setAttribute('y1', p1.y);
+        line.setAttribute('x2', p2.x);
+        line.setAttribute('y2', p2.y);
+        line.setAttribute('stroke', '#e5e7eb');
+        line.setAttribute('stroke-width', '2');
+        svg.appendChild(line);
+      });
+      container.appendChild(svg);
+
+      // 绘制节点
+      Object.entries(nodePositions).forEach(([id, pos]) => {
+        const node = document.createElement('div');
+        node.className = 'force-node';
+        node.style.cssText = `
+          left: ${pos.x - pos.r}px;
+          top: ${pos.y - pos.r}px;
+          width: ${pos.r * 2}px;
+          height: ${pos.r * 2}px;
+          background: ${typeColors[pos.type]};
+          font-size: ${pos.r > 28 ? 11 : 9}px;
+        `;
+        node.textContent = pos.name;
+        node.title = `${pos.name} (${pos.type})`;
+        container.appendChild(node);
+      });
+    }
+
+    // 渲染卡片网格
+    function renderCards() {
+      const grid = document.getElementById('cards-grid');
+      grid.innerHTML = files.map((f, i) => `
+        <div class="file-card" onclick="selectCard(${f.id})">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">${f.type === 'pdf' ? '📄' : '📊'}</span>
+            <span class="text-sm font-medium truncate flex-1">${f.name}</span>
+          </div>
+          <div class="flex flex-wrap">
+            ${f.tags.map((t, ti) => `
+              <span class="tag ${tagColors[ti % tagColors.length]}">${t}</span>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function selectCard(id) {
+      const file = files.find(f => f.id === id);
+      const relations = document.getElementById('cards-relations');
+      
+      // 找相关文件
+      const related = files.filter(f => 
+        f.id !== id && f.tags.some(t => file.tags.includes(t))
+      );
+
+      relations.innerHTML = `
+        <div class="bg-white rounded-lg p-3 mb-3">
+          <div class="font-medium text-sm">${file.name}</div>
+          <div class="text-xs text-gray-500 mt-1">标签: ${file.tags.join(', ')}</div>
+        </div>
+        <div class="text-xs font-medium text-gray-500 mb-2">相关文件 (${related.length})</div>
+        ${related.map(f => `
+          <div class="bg-white rounded p-2 text-xs cursor-pointer hover:bg-blue-50">
+            <div class="font-medium">${f.name}</div>
+            <div class="text-gray-400 mt-1">共享: ${f.tags.filter(t => file.tags.includes(t)).join(', ')}</div>
+          </div>
+        `).join('')}
+      `;
+
+      // 高亮选中卡片
+      document.querySelectorAll('.file-card').forEach((c, i) => {
+        c.classList.toggle('selected', i + 1 === id);
+      });
+    }
+
+    // 渲染树状视图
+    function renderTree() {
+      const tree = document.getElementById('tree-view');
+      const folders = [...new Set(files.map(f => f.folder))];
+      
+      tree.innerHTML = folders.map(folder => `
+        <div class="mb-2">
+          <div class="font-medium text-gray-700 flex items-center gap-1">
+            <span>📁</span> ${folder}
+          </div>
+          <div class="ml-4 mt-1 space-y-1">
+            ${files.filter(f => f.folder === folder).map(f => `
+              <div class="tree-item text-gray-600 flex items-center gap-2">
+                <span>${f.type === 'pdf' ? '📄' : '📊'}</span>
+                <span class="truncate">${f.name}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+
+      // 渲染关联视图
+      const relView = document.getElementById('tree-relations');
+      const entityNodes = [
+        { name: 'DMS', type: 'project', x: 100, y: 80 },
+        { name: 'DAS', type: 'project', x: 250, y: 60 },
+        { name: '数据库', type: 'technology', x: 180, y: 160 },
+        { name: '案例', type: 'topic', x: 350, y: 120 },
+      ];
+
+      relView.innerHTML = entityNodes.map(e => `
+        <div class="absolute flex flex-col items-center cursor-pointer group" 
+             style="left: ${e.x}px; top: ${e.y}px;">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center text-white text-xs font-bold group-hover:scale-110 transition"
+               style="background: ${typeColors[e.type]}">
+            ${e.name.slice(0, 2)}
+          </div>
+          <span class="text-xs mt-1 font-medium">${e.name}</span>
+        </div>
+      `).join('');
+    }
+
+    // 渲染矩阵
+    function renderMatrix() {
+      const container = document.getElementById('matrix-view');
+      const n = files.length;
+      
+      // 计算关联矩阵
+      const matrix = [];
+      for (let i = 0; i < n; i++) {
+        matrix[i] = [];
+        for (let j = 0; j < n; j++) {
+          if (i === j) {
+            matrix[i][j] = 0;
+          } else {
+            const shared = files[i].tags.filter(t => files[j].tags.includes(t)).length;
+            matrix[i][j] = shared;
+          }
+        }
+      }
+
+      container.innerHTML = `
+        <div class="flex">
+          <div class="w-24"></div>
+          ${files.map(f => `
+            <div class="w-8 text-xs text-gray-500 text-center truncate" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+              ${f.name.slice(0, 8)}
+            </div>
+          `).join('')}
+        </div>
+        ${files.map((f, i) => `
+          <div class="flex items-center">
+            <div class="w-24 text-xs text-gray-500 truncate text-right pr-2">${f.name.slice(0, 10)}</div>
+            ${matrix[i].map((v, j) => {
+              const bg = v === 0 ? 'bg-gray-100' : v === 1 ? 'bg-blue-200' : v === 2 ? 'bg-blue-400' : 'bg-blue-600';
+              return `<div class="matrix-cell ${bg} m-0.5" title="${files[i].name} ↔ ${files[j].name}: ${v}个共享标签"></div>`;
+            }).join('')}
+          </div>
+        `).join('')}
+      `;
+    }
+
+    // 渲染标签云
+    function renderTagCloud() {
+      const container = document.getElementById('tag-cloud');
+      const allTags = {};
+      files.forEach(f => {
+        f.tags.forEach(t => {
+          allTags[t] = (allTags[t] || 0) + 1;
+        });
+      });
+
+      const sortedTags = Object.entries(allTags).sort((a, b) => b[1] - a[1]);
+      
+      container.innerHTML = sortedTags.map(([tag, count], i) => {
+        const size = 12 + count * 4;
+        return `
+          <span class="tag-cloud-item ${tagColors[i % tagColors.length]}"
+                style="font-size: ${size}px;"
+                onclick="selectTag('${tag}')">
+            ${tag} <span class="opacity-60">(${count})</span>
+          </span>
+        `;
+      }).join('');
+    }
+
+    function selectTag(tag) {
+      const relatedFiles = files.filter(f => f.tags.includes(tag));
+      const container = document.getElementById('tag-files');
+      
+      container.innerHTML = `
+        <div class="bg-blue-50 text-blue-700 rounded p-2 text-sm font-medium mb-2">
+          ${tag} (${relatedFiles.length}个文件)
+        </div>
+        ${relatedFiles.map(f => `
+          <div class="bg-white rounded p-2 text-xs cursor-pointer hover:bg-gray-50">
+            <div class="font-medium">${f.name}</div>
+            <div class="text-gray-400 mt-1">📁 ${f.folder}</div>
+          </div>
+        `).join('')}
+      `;
+    }
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      renderForceGraph();
+      renderCards();
+      renderTree();
+      renderMatrix();
+      renderTagCloud();
+    });
+  </script>
+</body>
+</html>
